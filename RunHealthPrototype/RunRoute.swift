@@ -1,16 +1,27 @@
-import Foundation
 import CoreLocation
+import Foundation
 
-struct RunRoute {
+struct RunRoute: Identifiable, Sendable {
     let workoutID: UUID
     let points: [RunRoutePoint]
+    let coordinates: [CLLocationCoordinate2D]
 
-    var coordinates: [CLLocationCoordinate2D] {
-        points.map { $0.coordinate }
+    init(
+        workoutID: UUID,
+        points: [RunRoutePoint],
+        coordinates: [CLLocationCoordinate2D]? = nil
+    ) {
+        self.workoutID = workoutID
+        self.points = points
+        self.coordinates = coordinates ?? points.map(\.coordinate)
+    }
+
+    var id: UUID {
+        workoutID
     }
 }
 
-struct RunRoutePoint: Identifiable {
+struct RunRoutePoint: Identifiable, Sendable {
     let id = UUID()
     let latitude: Double
     let longitude: Double

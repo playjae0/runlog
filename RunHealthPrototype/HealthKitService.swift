@@ -8,15 +8,26 @@ enum HealthAuthorizationResult {
     case failed(String)
 }
 
-struct RunningWorkoutSummary: Identifiable {
+struct RunningWorkoutSummary: Identifiable, Sendable {
     let id: UUID
     let startDate: Date
     let endDate: Date
     let duration: TimeInterval
     let distanceMeters: Double?
+    let averageHeartRate: Double?
 }
 
-final class HealthKitService {
+struct RunRouteBatchResult: Sendable {
+    let routes: [RunRoute]
+    let missingRouteWorkoutIDs: [UUID]
+    let failedWorkoutIDs: [UUID: String]
+}
+
+final class HealthKitService: @unchecked Sendable {
+    private static let routeCache = RunRouteCacheStore()
+    private static let routeFetchConcurrencyLimit = 4
+    private static let heartRateFetchConcurrencyLimit = 4
+
     private let healthStore = HKHealthStore()
 
     var isHealthDataAvailable: Bool {
@@ -30,56 +41,51 @@ final class HealthKitService {
 
         let workoutType = HKObjectType.workoutType()
         let routeType = HKSeriesType.workoutRoute()
+        var readTypes: Set<HKObjectType> = [workoutType, routeType]
+
+        if let heartRateType = HKObjectType.quantityType(forIdentifier: .heartRate) {
+            readTypes.insert(heartRateType)
+        }
 
         do {
             // HealthKit does not reveal the exact allow/deny decision for read access.
             // A successful return means the authorization request flow completed.
-            try await healthStore.requestAuthorization(toShare: [], read: [workoutType, routeType])
+            try await healthStore.requestAuthorization(toShare: [], read: readTypes)
             return .requestCompleted
         } catch {
             return .failed(error.localizedDescription)
         }
     }
 
-    func fetchRecentRunningWorkouts(limit: Int = HKObjectQueryNoLimit) async -> Result<[RunningWorkoutSummary], Error> {
+    func fetchRecentRunningWorkouts(
+        days: Int = 365,
+        limit: Int = HKObjectQueryNoLimit
+    ) async -> Result<[RunningWorkoutSummary], Error> {
         guard isHealthDataAvailable else {
             return .failure(HealthKitServiceError.healthDataUnavailable)
         }
 
-        let workoutType = HKObjectType.workoutType()
-        let runningPredicate = HKQuery.predicateForWorkouts(with: .running)
-        let newestFirst = NSSortDescriptor(
-            key: HKSampleSortIdentifierStartDate,
-            ascending: false
-        )
+        do {
+            let workouts = try await fetchRunningWorkouts(days: days, limit: limit)
+            let heartRates = await fetchAverageHeartRates(
+                for: workouts,
+                concurrencyLimit: Self.heartRateFetchConcurrencyLimit
+            )
 
-        return await withCheckedContinuation { continuation in
-            let query = HKSampleQuery(
-                sampleType: workoutType,
-                predicate: runningPredicate,
-                limit: limit,
-                sortDescriptors: [newestFirst]
-            ) { _, samples, error in
-                if let error {
-                    continuation.resume(returning: .failure(error))
-                    return
-                }
-
-                let workouts = (samples as? [HKWorkout]) ?? []
-                let summaries = workouts.map { workout in
-                    RunningWorkoutSummary(
-                        id: workout.uuid,
-                        startDate: workout.startDate,
-                        endDate: workout.endDate,
-                        duration: workout.duration,
-                        distanceMeters: workout.totalDistance?.doubleValue(for: .meter())
-                    )
-                }
-
-                continuation.resume(returning: .success(summaries))
+            let summaries = workouts.enumerated().map { index, workout in
+                RunningWorkoutSummary(
+                    id: workout.uuid,
+                    startDate: workout.startDate,
+                    endDate: workout.endDate,
+                    duration: workout.duration,
+                    distanceMeters: workout.totalDistance?.doubleValue(for: .meter()),
+                    averageHeartRate: heartRates[index]
+                )
             }
 
-            healthStore.execute(query)
+            return .success(summaries)
+        } catch {
+            return .failure(error)
         }
     }
 
@@ -88,6 +94,70 @@ final class HealthKitService {
             return .failure(HealthKitServiceError.healthDataUnavailable)
         }
 
+        if let cachedEntry = await Self.routeCache.value(for: workoutID) {
+            switch cachedEntry {
+            case .route(let route):
+                return .success(route)
+            case .missing:
+                return .failure(HealthKitServiceError.routeUnavailable)
+            }
+        }
+
+        let result = await fetchUncachedRoute(for: workoutID)
+
+        switch result {
+        case .success(let route):
+            await Self.routeCache.store(.route(route), for: workoutID)
+        case .failure(let error):
+            if let serviceError = error as? HealthKitServiceError,
+               serviceError == .routeUnavailable {
+                await Self.routeCache.store(.missing, for: workoutID)
+            }
+        }
+
+        return result
+    }
+
+    func fetchRoutes(for workoutIDs: [UUID]) async -> RunRouteBatchResult {
+        let collectedResults = await fetchRoutes(
+            for: workoutIDs,
+            concurrencyLimit: Self.routeFetchConcurrencyLimit
+        )
+
+        var routesByWorkoutID: [UUID: RunRoute] = [:]
+        var missingRouteWorkoutIDs = Set<UUID>()
+        var failedWorkoutIDs: [UUID: String] = [:]
+
+        for (workoutID, result) in collectedResults {
+            switch result {
+            case .success(let route):
+                if route.points.isEmpty {
+                    missingRouteWorkoutIDs.insert(workoutID)
+                } else {
+                    routesByWorkoutID[workoutID] = route
+                }
+
+            case .failure(let error):
+                if let serviceError = error as? HealthKitServiceError,
+                   serviceError == .routeUnavailable {
+                    missingRouteWorkoutIDs.insert(workoutID)
+                } else {
+                    failedWorkoutIDs[workoutID] = error.localizedDescription
+                }
+            }
+        }
+
+        let routes = workoutIDs.compactMap { routesByWorkoutID[$0] }
+        let orderedMissingRouteWorkoutIDs = workoutIDs.filter { missingRouteWorkoutIDs.contains($0) }
+
+        return RunRouteBatchResult(
+            routes: routes,
+            missingRouteWorkoutIDs: orderedMissingRouteWorkoutIDs,
+            failedWorkoutIDs: failedWorkoutIDs
+        )
+    }
+
+    private func fetchUncachedRoute(for workoutID: UUID) async -> Result<RunRoute, Error> {
         do {
             let workout = try await fetchWorkout(id: workoutID)
             let routes = try await fetchRoutes(for: workout)
@@ -105,10 +175,153 @@ final class HealthKitService {
                     altitude: location.verticalAccuracy >= 0 ? location.altitude : nil
                 )
             }
+            let coordinates = locations.map(\.coordinate)
 
-            return .success(RunRoute(workoutID: workoutID, points: points))
+            return .success(
+                RunRoute(
+                    workoutID: workoutID,
+                    points: points,
+                    coordinates: coordinates
+                )
+            )
         } catch {
             return .failure(error)
+        }
+    }
+
+    private func fetchRoutes(
+        for workoutIDs: [UUID],
+        concurrencyLimit: Int
+    ) async -> [(UUID, Result<RunRoute, Error>)] {
+        guard !workoutIDs.isEmpty else {
+            return []
+        }
+
+        let effectiveConcurrencyLimit = max(1, min(concurrencyLimit, workoutIDs.count))
+
+        return await withTaskGroup(of: (UUID, Result<RunRoute, Error>).self) { group in
+            var nextIndex = 0
+            var results: [(UUID, Result<RunRoute, Error>)] = []
+
+            func submitNextTaskIfNeeded() {
+                guard nextIndex < workoutIDs.count else {
+                    return
+                }
+
+                let workoutID = workoutIDs[nextIndex]
+                nextIndex += 1
+
+                group.addTask { [self] in
+                    let result = await fetchRoute(for: workoutID)
+                    return (workoutID, result)
+                }
+            }
+
+            for _ in 0..<effectiveConcurrencyLimit {
+                submitNextTaskIfNeeded()
+            }
+
+            while let result = await group.next() {
+                results.append(result)
+
+                if Task.isCancelled {
+                    group.cancelAll()
+                    continue
+                }
+
+                submitNextTaskIfNeeded()
+            }
+
+            return results
+        }
+    }
+
+    private func fetchAverageHeartRates(
+        for workouts: [HKWorkout],
+        concurrencyLimit: Int
+    ) async -> [Double?] {
+        guard !workouts.isEmpty else {
+            return []
+        }
+
+        let effectiveConcurrencyLimit = max(1, min(concurrencyLimit, workouts.count))
+
+        return await withTaskGroup(of: (Int, Double?).self) { group in
+            var nextIndex = 0
+            var heartRates = Array<Double?>(repeating: nil, count: workouts.count)
+
+            func submitNextTaskIfNeeded() {
+                guard nextIndex < workouts.count else {
+                    return
+                }
+
+                let index = nextIndex
+                let workout = workouts[index]
+                nextIndex += 1
+
+                group.addTask { [self] in
+                    let averageHeartRate = try? await fetchAverageHeartRate(for: workout)
+                    return (index, averageHeartRate)
+                }
+            }
+
+            for _ in 0..<effectiveConcurrencyLimit {
+                submitNextTaskIfNeeded()
+            }
+
+            while let (index, averageHeartRate) = await group.next() {
+                heartRates[index] = averageHeartRate
+
+                if Task.isCancelled {
+                    group.cancelAll()
+                    continue
+                }
+
+                submitNextTaskIfNeeded()
+            }
+
+            return heartRates
+        }
+    }
+
+    private func fetchRunningWorkouts(days: Int, limit: Int) async throws -> [HKWorkout] {
+        let workoutType = HKObjectType.workoutType()
+        let runningPredicate = HKQuery.predicateForWorkouts(with: .running)
+        let startDate = Calendar.current.date(
+            byAdding: .day,
+            value: -days,
+            to: Date()
+        )
+        let datePredicate = HKQuery.predicateForSamples(
+            withStart: startDate,
+            end: nil,
+            options: [.strictStartDate]
+        )
+        let predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
+            runningPredicate,
+            datePredicate
+        ])
+        let newestFirst = NSSortDescriptor(
+            key: HKSampleSortIdentifierStartDate,
+            ascending: false
+        )
+
+        return try await withCheckedThrowingContinuation { continuation in
+            let query = HKSampleQuery(
+                sampleType: workoutType,
+                predicate: predicate,
+                limit: limit,
+                sortDescriptors: [newestFirst]
+            ) { _, samples, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                    return
+                }
+
+                continuation.resume(returning: (samples as? [HKWorkout]) ?? [])
+            }
+
+            healthStore.execute(query)
         }
     }
 
@@ -132,6 +345,34 @@ final class HealthKitService {
                 }
 
                 continuation.resume(returning: workout)
+            }
+
+            healthStore.execute(query)
+        }
+    }
+
+    private func fetchAverageHeartRate(for workout: HKWorkout) async throws -> Double? {
+        guard let heartRateType = HKObjectType.quantityType(forIdentifier: .heartRate) else {
+            return nil
+        }
+
+        return try await withCheckedThrowingContinuation { continuation in
+            let predicate = HKQuery.predicateForObjects(from: workout)
+            let query = HKStatisticsQuery(
+                quantityType: heartRateType,
+                quantitySamplePredicate: predicate,
+                options: .discreteAverage
+            ) { _, statistics, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                    return
+                }
+
+                let beatsPerMinute = statistics?
+                    .averageQuantity()?
+                    .doubleValue(for: HKUnit.count().unitDivided(by: HKUnit.minute()))
+
+                continuation.resume(returning: beatsPerMinute)
             }
 
             healthStore.execute(query)
@@ -182,7 +423,24 @@ final class HealthKitService {
     }
 }
 
-enum HealthKitServiceError: LocalizedError {
+private actor RunRouteCacheStore {
+    enum Entry: Sendable {
+        case route(RunRoute)
+        case missing
+    }
+
+    private var storage: [UUID: Entry] = [:]
+
+    func value(for workoutID: UUID) -> Entry? {
+        storage[workoutID]
+    }
+
+    func store(_ entry: Entry, for workoutID: UUID) {
+        storage[workoutID] = entry
+    }
+}
+
+enum HealthKitServiceError: LocalizedError, Equatable {
     case healthDataUnavailable
     case workoutUnavailable
     case routeUnavailable

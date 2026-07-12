@@ -2,36 +2,30 @@ import MapKit
 import SwiftUI
 
 struct WorkoutRouteMapView: View {
+    @AppStorage(MapTheme.storageKey) private var selectedMapThemeRawValue = MapTheme.system.rawValue
     let workout: RunWorkout
 
     @State private var route: RunRoute?
     @State private var routeState: RouteState = .loading
     @State private var mapPosition: MapCameraPosition = .automatic
+    @State private var mapProvider: MapProvider = .apple
 
     private let healthKitService = HealthKitService()
 
+    private var selectedMapTheme: MapTheme {
+        MapTheme(rawValue: selectedMapThemeRawValue) ?? .system
+    }
+
     var body: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 14) {
             routeStatus
-
-            Map(position: $mapPosition) {
-                if let route {
-                    MapPolyline(coordinates: route.coordinates)
-                        .stroke(.blue, lineWidth: 4)
-
-                    if let first = route.coordinates.first {
-                        Marker("Start", coordinate: first)
-                    }
-
-                    if let last = route.coordinates.last {
-                        Marker("Finish", coordinate: last)
-                    }
-                }
-            }
-            .mapStyle(.standard)
+            MapProviderPicker(selection: $mapProvider)
+            routeMap
         }
-        .padding()
+        .padding(RunTheme.pagePadding)
+        .background(RunTheme.screenBackground)
         .navigationTitle("Route")
+        .animation(RunTheme.smoothAnimation, value: routeState)
         .task {
             await loadRoute()
         }
@@ -42,22 +36,80 @@ struct WorkoutRouteMapView: View {
         switch routeState {
         case .loading:
             ProgressView("코스 좌표를 읽는 중입니다...")
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .runCard()
 
         case .loaded(let pointCount):
             Text("코스 좌표 \(pointCount)개를 읽었습니다.")
                 .font(.subheadline)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(RunTheme.secondaryText)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .runCard()
 
         case .empty:
             Text("이 workout에는 표시할 코스 좌표가 없습니다.")
                 .font(.subheadline)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(RunTheme.secondaryText)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .runCard()
 
         case .failed(let message):
             Text("코스 읽기 실패: \(message)")
                 .font(.subheadline)
-                .foregroundStyle(.red)
+                .foregroundStyle(RunTheme.errorText)
                 .multilineTextAlignment(.center)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .runCard()
+        }
+    }
+
+    @ViewBuilder
+    private var routeMap: some View {
+        Group {
+            switch mapProvider {
+            case .apple:
+                Map(position: $mapPosition) {
+                    if let route {
+                        MapPolyline(coordinates: route.coordinates)
+                            .stroke(RunTheme.routeAccent, lineWidth: 4)
+
+                        if let first = route.coordinates.first {
+                            Marker("Start", coordinate: first)
+                        }
+
+                        if let last = route.coordinates.last {
+                            Marker("Finish", coordinate: last)
+                        }
+                    }
+                }
+                .mapStyle(selectedMapTheme.mapStyle)
+                .runMapTheme(selectedMapTheme)
+
+            case .google:
+                if GoogleMapsBootstrap.isConfigured {
+                    GoogleMapView(
+                        routes: route.map { [$0.coordinates] } ?? [],
+                        currentCoordinate: nil,
+                        lineColor: UIColor(RunTheme.routeAccent),
+                        mapTheme: selectedMapTheme,
+                        showsStartMarker: true,
+                        showsEndMarker: true
+                    )
+                } else {
+                    Text("Google Maps API 키를 설정하면 비교 지도를 확인할 수 있습니다.")
+                        .font(.subheadline)
+                        .foregroundStyle(RunTheme.secondaryText)
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: .infinity, minHeight: 320)
+                        .background(RunTheme.subtleBackground)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, minHeight: 320)
+        .clipShape(RoundedRectangle(cornerRadius: RunTheme.cardRadius))
+        .overlay {
+            RoundedRectangle(cornerRadius: RunTheme.cardRadius)
+                .stroke(RunTheme.divider, lineWidth: 1)
         }
     }
 
@@ -75,7 +127,7 @@ struct WorkoutRouteMapView: View {
                     routeState = .empty
                 } else {
                     routeState = .loaded(route.points.count)
-                    mapPosition = .region(region(for: route.coordinates))
+                    mapPosition = .region(RunRouteMapRegion.region(for: route.coordinates))
                 }
 
             case .failure(let error):
@@ -83,46 +135,9 @@ struct WorkoutRouteMapView: View {
             }
         }
     }
-
-    private func region(for coordinates: [CLLocationCoordinate2D]) -> MKCoordinateRegion {
-        guard let first = coordinates.first else {
-            return MKCoordinateRegion()
-        }
-
-        let bounds = coordinates.reduce(
-            (
-                minLatitude: first.latitude,
-                maxLatitude: first.latitude,
-                minLongitude: first.longitude,
-                maxLongitude: first.longitude
-            )
-        ) { bounds, coordinate in
-            (
-                min(bounds.minLatitude, coordinate.latitude),
-                max(bounds.maxLatitude, coordinate.latitude),
-                min(bounds.minLongitude, coordinate.longitude),
-                max(bounds.maxLongitude, coordinate.longitude)
-            )
-        }
-
-        let latitudeDelta = max((bounds.maxLatitude - bounds.minLatitude) * 1.3, 0.005)
-        let longitudeDelta = max((bounds.maxLongitude - bounds.minLongitude) * 1.3, 0.005)
-        let center = CLLocationCoordinate2D(
-            latitude: (bounds.minLatitude + bounds.maxLatitude) / 2,
-            longitude: (bounds.minLongitude + bounds.maxLongitude) / 2
-        )
-
-        return MKCoordinateRegion(
-            center: center,
-            span: MKCoordinateSpan(
-                latitudeDelta: latitudeDelta,
-                longitudeDelta: longitudeDelta
-            )
-        )
-    }
 }
 
-private enum RouteState {
+private enum RouteState: Equatable {
     case loading
     case loaded(Int)
     case empty

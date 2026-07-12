@@ -74,4 +74,12 @@ enum WorkoutFormatter {
 
         return String(format: "%d:%02d / km", paceMinutes, paceSeconds)
     }
+
+    static func heartRate(_ beatsPerMinute: Double?) -> String {
+        guard let beatsPerMinute else {
+            return "심박수 없음"
+        }
+
+        return "\(Int(beatsPerMinute.rounded())) bpm"
+    }
 }

@@ -18,6 +18,19 @@
 		AA0000000000000000000009 /* WorkoutDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000001B /* WorkoutDetailView.swift */; };
 		AA000000000000000000000A /* RunRoute.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000001C /* RunRoute.swift */; };
 		AA000000000000000000000B /* WorkoutRouteMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000001D /* WorkoutRouteMapView.swift */; };
+		AA000000000000000000000C /* RunStatsSummaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000001E /* RunStatsSummaryView.swift */; };
+		AA000000000000000000000D /* RunTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000001F /* RunTheme.swift */; };
+		AA000000000000000000000E /* RunWorkoutLogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000020 /* RunWorkoutLogView.swift */; };
+		AA000000000000000000000F /* LastRunSummaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000021 /* LastRunSummaryView.swift */; };
+		AA0000000000000000000022 /* RunWorkoutCacheStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000023 /* RunWorkoutCacheStore.swift */; };
+		AA0000000000000000000024 /* MonthlyRunArchive.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000025 /* MonthlyRunArchive.swift */; };
+		AA0000000000000000000026 /* MonthlyRunArchiveView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000027 /* MonthlyRunArchiveView.swift */; };
+		AA0000000000000000000028 /* RunRouteMapRegion.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000029 /* RunRouteMapRegion.swift */; };
+		AA000000000000000000002A /* WorkoutReplayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000002B /* WorkoutReplayView.swift */; };
+		AA000000000000000000002C /* GoogleMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000002D /* GoogleMapView.swift */; };
+		AA000000000000000000002E /* MapProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000002F /* MapProvider.swift */; };
+		AA0000000000000000000037 /* FullscreenReplayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000038 /* FullscreenReplayView.swift */; };
+		AA0000000000000000000034 /* GoogleMaps in Frameworks */ = {isa = PBXBuildFile; productRef = AA0000000000000000000036 /* GoogleMaps */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -35,13 +48,26 @@
 		AA000000000000000000001B /* WorkoutDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutDetailView.swift; sourceTree = "<group>"; };
 		AA000000000000000000001C /* RunRoute.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunRoute.swift; sourceTree = "<group>"; };
 		AA000000000000000000001D /* WorkoutRouteMapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutRouteMapView.swift; sourceTree = "<group>"; };
+		AA000000000000000000001E /* RunStatsSummaryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunStatsSummaryView.swift; sourceTree = "<group>"; };
+		AA000000000000000000001F /* RunTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunTheme.swift; sourceTree = "<group>"; };
+		AA0000000000000000000020 /* RunWorkoutLogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunWorkoutLogView.swift; sourceTree = "<group>"; };
+		AA0000000000000000000021 /* LastRunSummaryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LastRunSummaryView.swift; sourceTree = "<group>"; };
+		AA0000000000000000000023 /* RunWorkoutCacheStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunWorkoutCacheStore.swift; sourceTree = "<group>"; };
+		AA0000000000000000000025 /* MonthlyRunArchive.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonthlyRunArchive.swift; sourceTree = "<group>"; };
+		AA0000000000000000000027 /* MonthlyRunArchiveView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonthlyRunArchiveView.swift; sourceTree = "<group>"; };
+		AA0000000000000000000029 /* RunRouteMapRegion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunRouteMapRegion.swift; sourceTree = "<group>"; };
+		AA000000000000000000002B /* WorkoutReplayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutReplayView.swift; sourceTree = "<group>"; };
+		AA000000000000000000002D /* GoogleMapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoogleMapView.swift; sourceTree = "<group>"; };
+		AA000000000000000000002F /* MapProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapProvider.swift; sourceTree = "<group>"; };
+		AA0000000000000000000038 /* FullscreenReplayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FullscreenReplayView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		AA0000000000000000000020 /* Frameworks */ = {
+		AA0000000000000000000051 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AA0000000000000000000034 /* GoogleMaps in Frameworks */,
 				AA0000000000000000000005 /* HealthKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -66,10 +92,22 @@
 				AA0000000000000000000014 /* HealthKitService.swift */,
 				AA0000000000000000000018 /* RunWorkout.swift */,
 				AA000000000000000000001A /* RunStats.swift */,
+				AA000000000000000000001E /* RunStatsSummaryView.swift */,
+				AA000000000000000000001F /* RunTheme.swift */,
+				AA0000000000000000000020 /* RunWorkoutLogView.swift */,
+				AA0000000000000000000025 /* MonthlyRunArchive.swift */,
+				AA0000000000000000000027 /* MonthlyRunArchiveView.swift */,
+				AA0000000000000000000021 /* LastRunSummaryView.swift */,
+				AA0000000000000000000023 /* RunWorkoutCacheStore.swift */,
 				AA0000000000000000000019 /* WorkoutFormatter.swift */,
 				AA000000000000000000001B /* WorkoutDetailView.swift */,
 				AA000000000000000000001C /* RunRoute.swift */,
+				AA0000000000000000000029 /* RunRouteMapRegion.swift */,
+				AA000000000000000000002F /* MapProvider.swift */,
+				AA000000000000000000002D /* GoogleMapView.swift */,
+				AA0000000000000000000038 /* FullscreenReplayView.swift */,
 				AA000000000000000000001D /* WorkoutRouteMapView.swift */,
+				AA000000000000000000002B /* WorkoutReplayView.swift */,
 				AA0000000000000000000015 /* Info.plist */,
 				AA0000000000000000000016 /* RunHealthPrototype.entitlements */,
 				AA0000000000000000000013 /* Assets.xcassets */,
@@ -101,7 +139,7 @@
 			buildConfigurationList = AA0000000000000000000081 /* Build configuration list for PBXNativeTarget "RunHealthPrototype" */;
 			buildPhases = (
 				AA0000000000000000000050 /* Sources */,
-				AA0000000000000000000020 /* Frameworks */,
+				AA0000000000000000000051 /* Frameworks */,
 				AA0000000000000000000060 /* Resources */,
 			);
 			buildRules = (
@@ -109,6 +147,9 @@
 			dependencies = (
 			);
 			name = RunHealthPrototype;
+			packageProductDependencies = (
+				AA0000000000000000000036 /* GoogleMaps */,
+			);
 			productName = RunHealthPrototype;
 			productReference = AA0000000000000000000010 /* RunHealthPrototype.app */;
 			productType = "com.apple.product-type.application";
@@ -142,6 +183,9 @@
 				Base,
 			);
 			mainGroup = AA0000000000000000000030;
+			packageReferences = (
+				AA0000000000000000000035 /* XCRemoteSwiftPackageReference "ios-maps-sdk" */,
+			);
 			productRefGroup = AA0000000000000000000032 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -176,6 +220,18 @@
 				AA0000000000000000000009 /* WorkoutDetailView.swift in Sources */,
 				AA000000000000000000000A /* RunRoute.swift in Sources */,
 				AA000000000000000000000B /* WorkoutRouteMapView.swift in Sources */,
+				AA000000000000000000002A /* WorkoutReplayView.swift in Sources */,
+				AA0000000000000000000024 /* MonthlyRunArchive.swift in Sources */,
+				AA0000000000000000000026 /* MonthlyRunArchiveView.swift in Sources */,
+				AA0000000000000000000028 /* RunRouteMapRegion.swift in Sources */,
+				AA000000000000000000002E /* MapProvider.swift in Sources */,
+				AA000000000000000000002C /* GoogleMapView.swift in Sources */,
+				AA0000000000000000000037 /* FullscreenReplayView.swift in Sources */,
+				AA000000000000000000000C /* RunStatsSummaryView.swift in Sources */,
+				AA000000000000000000000D /* RunTheme.swift in Sources */,
+				AA000000000000000000000E /* RunWorkoutLogView.swift in Sources */,
+				AA000000000000000000000F /* LastRunSummaryView.swift in Sources */,
+				AA0000000000000000000022 /* RunWorkoutCacheStore.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -377,6 +433,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		AA0000000000000000000035 /* XCRemoteSwiftPackageReference "ios-maps-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/googlemaps/ios-maps-sdk";
+			requirement = {
+				kind = exactVersion;
+				version = 10.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		AA0000000000000000000036 /* GoogleMaps */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AA0000000000000000000035 /* XCRemoteSwiftPackageReference "ios-maps-sdk" */;
+			productName = GoogleMaps;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = AA0000000000000000000070 /* Project object */;
 }
