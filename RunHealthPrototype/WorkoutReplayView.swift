@@ -2,6 +2,7 @@ import MapKit
 import SwiftUI
 
 struct WorkoutReplayView: View {
+    @Environment(\.scenePhase) private var scenePhase
     @AppStorage(MapTheme.storageKey) private var selectedMapThemeRawValue = MapTheme.system.rawValue
     let workout: RunWorkout
 
@@ -61,14 +62,16 @@ struct WorkoutReplayView: View {
         .task(id: workout.id) {
             await replayModel.loadRoute()
         }
-        .onReceive(replayModel.playbackTimer) { _ in
-            replayModel.advancePlaybackIfNeeded()
-        }
-        .onReceive(replayModel.visualTimer) { _ in
-            replayModel.advanceVisualProgressIfNeeded()
-        }
         .onChange(of: replayModel.mapPosition) { _, newPosition in
             replayModel.handleMapPositionChange(newPosition)
+        }
+        .onDisappear {
+            replayModel.pausePlayback()
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            if newPhase != .active {
+                replayModel.pausePlayback()
+            }
         }
         .fullScreenCover(isPresented: $isShowingFullscreenReplay) {
             FullscreenReplayView(
@@ -178,21 +181,29 @@ struct WorkoutReplayView: View {
     }
 
     private var replayProgressSummary: some View {
-        HStack(spacing: 10) {
-            progressMetric(
-                title: "경과 시간",
-                value: replayModel.elapsedTime.map(WorkoutFormatter.duration) ?? "시간 없음"
-            )
-            progressMetric(
-                title: "누적 거리",
-                value: replayModel.cumulativeDistanceMeters.map { WorkoutFormatter.distance($0) } ?? "거리 없음"
-            )
-            progressMetric(
-                title: "현재 페이스",
-                value: replayModel.currentPaceText
-            )
+        VStack(spacing: 10) {
+            HStack(spacing: 10) {
+                progressMetric(
+                    title: "경과 시간",
+                    value: replayModel.elapsedTime.map(WorkoutFormatter.duration) ?? "시간 없음"
+                )
+                progressMetric(
+                    title: "누적 거리",
+                    value: replayModel.cumulativeDistanceMeters.map { WorkoutFormatter.distance($0) } ?? "거리 없음"
+                )
+                progressMetric(
+                    title: "현재까지 평균",
+                    value: replayModel.currentPaceText
+                )
+            }
+            .runCard()
+
+            HStack(spacing: 10) {
+                progressMetric(title: "남은 거리", value: replayModel.remainingDistanceText)
+                progressMetric(title: "진행률", value: replayModel.progressText)
+            }
+            .runCard()
         }
-        .runCard()
     }
 
     private func progressMetric(title: String, value: String) -> some View {

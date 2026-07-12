@@ -61,7 +61,7 @@ enum RunStatsPeriod {
     var title: String {
         switch self {
         case .allTime:
-            return "전체 러닝 로그"
+            return "최근 1년 러닝 로그"
         case .currentMonth:
             return "이번 달 러닝 로그"
         case .currentYear:

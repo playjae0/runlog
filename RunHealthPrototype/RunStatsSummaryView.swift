@@ -16,7 +16,7 @@ struct RunStatsSummaryView: View {
         VStack(alignment: .leading, spacing: RunTheme.contentSpacing) {
             RunSectionTitle(
                 title: "내 러닝 기록",
-                caption: "누적 거리와 최근 흐름"
+                caption: "최근 1년 거리와 러닝 흐름"
             )
 
             VStack(spacing: RunTheme.contentSpacing) {
@@ -34,10 +34,10 @@ struct RunStatsSummaryView: View {
             )
         } label: {
             RunHeroCard(
-                title: "누적 거리",
+                title: "최근 1년 거리",
                 systemImage: "figure.run",
                 value: WorkoutFormatter.kilometers(stats.totalDistanceKilometers),
-                subtitle: "지금까지 쌓인 전체 러닝 거리"
+                subtitle: "HealthKit에서 불러온 최근 365일 러닝 거리"
             ) {
                 HStack(spacing: 12) {
                     compactMetric(
@@ -64,7 +64,7 @@ struct RunStatsSummaryView: View {
             LazyVGrid(columns: supportColumns, spacing: 10) {
                 logLink(
                     period: .allTime,
-                    title: "총 러닝",
+                    title: "최근 1년 러닝",
                     value: "\(stats.totalRuns)회",
                     systemImage: "number.circle"
                 )

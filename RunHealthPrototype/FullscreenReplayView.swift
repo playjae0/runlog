@@ -3,6 +3,7 @@ import SwiftUI
 
 struct FullscreenReplayView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.scenePhase) private var scenePhase
     @AppStorage(MapTheme.storageKey) private var selectedMapThemeRawValue = MapTheme.system.rawValue
 
     @StateObject private var replayModel: ReplayViewModel
@@ -54,14 +55,16 @@ struct FullscreenReplayView: View {
         .task(id: replayModel.workout.id) {
             await replayModel.loadRoute()
         }
-        .onReceive(replayModel.playbackTimer) { _ in
-            replayModel.advancePlaybackIfNeeded()
-        }
-        .onReceive(replayModel.visualTimer) { _ in
-            replayModel.advanceVisualProgressIfNeeded()
-        }
         .onChange(of: replayModel.mapPosition) { _, newPosition in
             replayModel.handleMapPositionChange(newPosition)
+        }
+        .onDisappear {
+            replayModel.pausePlayback()
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            if newPhase != .active {
+                replayModel.pausePlayback()
+            }
         }
     }
 
@@ -123,7 +126,7 @@ struct FullscreenReplayView: View {
                     value: replayModel.elapsedTime.map(WorkoutFormatter.duration) ?? "시간 없음"
                 )
                 fullscreenMetric(
-                    title: "현재 페이스",
+                    title: "현재까지 평균",
                     value: replayModel.currentPaceText
                 )
             }
@@ -289,10 +292,6 @@ struct FullscreenReplayView: View {
 @MainActor
 final class ReplayViewModel: ObservableObject {
     let workout: RunWorkout
-    let playbackTimerInterval: TimeInterval = 0.25
-    let playbackTimer = Timer.publish(every: 0.25, on: .main, in: .common).autoconnect()
-    let visualTimer = Timer.publish(every: 0.06, on: .main, in: .common).autoconnect()
-
     @Published var route: RunRoute?
     @Published var replayPoints: [RunRoutePoint] = []
     @Published var replayCoordinates: [CLLocationCoordinate2D] = []
@@ -324,6 +323,9 @@ final class ReplayViewModel: ObservableObject {
     private let initialPlaybackSpeed: PlaybackSpeed
     private let initialCameraMode: ReplayCameraMode
     private let initialIsCameraFollowing: Bool
+    private var playbackTimer: Timer?
+    private var visualTimer: Timer?
+    private var lastPlaybackTickDate: Date?
 
     init(
         workout: RunWorkout,
@@ -443,6 +445,24 @@ final class ReplayViewModel: ObservableObject {
         )
     }
 
+    var remainingDistanceText: String {
+        guard let totalDistance = cumulativeDistances.last,
+              let currentDistance = cumulativeDistanceMeters else {
+            return "거리 없음"
+        }
+
+        return WorkoutFormatter.distance(max(totalDistance - currentDistance, 0))
+    }
+
+    var progressText: String {
+        guard lastIndex > 0 else {
+            return coordinates.isEmpty ? "0%" : "100%"
+        }
+
+        let ratio = min(max(Double(clampedCurrentIndex) / Double(lastIndex), 0), 1)
+        return "\(Int((ratio * 100).rounded()))%"
+    }
+
     var canReplay: Bool {
         coordinates.count > 1
     }
@@ -524,13 +544,23 @@ final class ReplayViewModel: ObservableObject {
             syncCameraToCurrentIndexIfNeeded(force: true)
         }
 
-        isPlaying.toggle()
+        if isPlaying {
+            pausePlayback()
+        } else {
+            isPlaying = true
+            startPlaybackTimers()
+        }
     }
 
     func resetPlayback() {
-        isPlaying = false
+        pausePlayback()
         setCurrentIndex(0)
         debugReplayLog("reset")
+    }
+
+    func pausePlayback() {
+        isPlaying = false
+        stopPlaybackTimers()
     }
 
     func handleCameraModeChange(_ mode: ReplayCameraMode) {
@@ -547,13 +577,13 @@ final class ReplayViewModel: ObservableObject {
         syncCameraToCurrentIndexIfNeeded(force: true)
     }
 
-    func advancePlaybackIfNeeded() {
+    func advancePlaybackIfNeeded(by realElapsedTime: TimeInterval) {
         guard isPlaying, canReplay, !isScrubbing else {
             return
         }
 
         let nextElapsedTime = min(
-            replayElapsedTime + (playbackTimerInterval * playbackSpeed.factor),
+            replayElapsedTime + (max(realElapsedTime, 0) * playbackSpeed.factor),
             totalReplayDuration
         )
         replayElapsedTime = nextElapsedTime
@@ -562,7 +592,7 @@ final class ReplayViewModel: ObservableObject {
         if nextElapsedTime >= totalReplayDuration || nextIndex >= lastIndex {
             setCurrentIndex(lastIndex, syncReplayElapsedTime: false)
             replayElapsedTime = totalReplayDuration
-            isPlaying = false
+            pausePlayback()
             debugReplayLog("auto stopped at last index \(lastIndex)")
         } else {
             setCurrentIndex(nextIndex, syncReplayElapsedTime: false)
@@ -596,7 +626,7 @@ final class ReplayViewModel: ObservableObject {
     func handleSliderEditingChanged(_ isEditing: Bool) {
         if isEditing {
             isScrubbing = true
-            isPlaying = false
+            pausePlayback()
         } else {
             isScrubbing = false
             setCurrentIndex(clampedCurrentIndex)
@@ -643,6 +673,7 @@ final class ReplayViewModel: ObservableObject {
     }
 
     private func resetReplayState() {
+        stopPlaybackTimers()
         currentIndex = 0
         replayElapsedTime = 0
         visualProgress = 0
@@ -654,6 +685,42 @@ final class ReplayViewModel: ObservableObject {
         smoothedCameraHeading = nil
         suppressUserCameraChangeUntil = nil
         isScrubbing = false
+    }
+
+    private func startPlaybackTimers() {
+        stopPlaybackTimers()
+        lastPlaybackTickDate = Date()
+
+        let playbackTimer = Timer(timeInterval: 0.05, repeats: true) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                guard let self, self.isPlaying else {
+                    return
+                }
+
+                let now = Date()
+                let elapsed = now.timeIntervalSince(self.lastPlaybackTickDate ?? now)
+                self.lastPlaybackTickDate = now
+                self.advancePlaybackIfNeeded(by: elapsed)
+            }
+        }
+        let visualTimer = Timer(timeInterval: 0.06, repeats: true) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.advanceVisualProgressIfNeeded()
+            }
+        }
+
+        self.playbackTimer = playbackTimer
+        self.visualTimer = visualTimer
+        RunLoop.main.add(playbackTimer, forMode: .common)
+        RunLoop.main.add(visualTimer, forMode: .common)
+    }
+
+    private func stopPlaybackTimers() {
+        playbackTimer?.invalidate()
+        visualTimer?.invalidate()
+        playbackTimer = nil
+        visualTimer = nil
+        lastPlaybackTickDate = nil
     }
 
     private func clampedIndex(_ index: Int) -> Int {
