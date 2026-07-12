@@ -7,10 +7,12 @@ struct RunWorkoutCache: Sendable {
 
 struct RunWorkoutCacheStore: @unchecked Sendable {
     private struct CachePayload: Codable {
+        let schemaVersion: Int
         let workouts: [RunWorkout]
         let lastRefreshedAt: Date
     }
 
+    private let currentSchemaVersion = 1
     private let fileManager: FileManager
     private let fileName = "run-workout-cache.json"
 
@@ -20,7 +22,8 @@ struct RunWorkoutCacheStore: @unchecked Sendable {
 
     func load() -> RunWorkoutCache {
         guard let data = try? Data(contentsOf: cacheURL),
-              let payload = try? decoder.decode(CachePayload.self, from: data) else {
+              let payload = try? decoder.decode(CachePayload.self, from: data),
+              payload.schemaVersion == currentSchemaVersion else {
             return RunWorkoutCache(workouts: [], lastRefreshedAt: nil)
         }
 
@@ -37,6 +40,7 @@ struct RunWorkoutCacheStore: @unchecked Sendable {
         )
 
         let payload = CachePayload(
+            schemaVersion: currentSchemaVersion,
             workouts: workouts.sorted { $0.startDate > $1.startDate },
             lastRefreshedAt: refreshedAt
         )
