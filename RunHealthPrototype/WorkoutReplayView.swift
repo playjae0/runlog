@@ -36,7 +36,6 @@ struct WorkoutReplayView: View {
                         .buttonStyle(.plain)
                     }
 
-                    MapProviderPicker(selection: mapProviderBinding)
                     replayMap
                     routeLegend
                 }
@@ -74,7 +73,6 @@ struct WorkoutReplayView: View {
         .fullScreenCover(isPresented: $isShowingFullscreenReplay) {
             FullscreenReplayView(
                 workout: workout,
-                initialMapProvider: replayModel.mapProvider,
                 initialPlaybackSpeed: replayModel.playbackSpeed,
                 initialCameraMode: .cinematic,
                 initialIsCameraFollowing: replayModel.isCameraFollowing
@@ -124,69 +122,42 @@ struct WorkoutReplayView: View {
 
     @ViewBuilder
     private var replayMap: some View {
-        Group {
-            switch replayModel.mapProvider {
-            case .apple:
-                Map(position: mapPositionBinding, interactionModes: replayModel.standardMapInteractionModes) {
-                    ForEach(replayModel.completedVisibleSegments) { segment in
-                        MapPolyline(coordinates: segment.coordinates)
-                            .stroke(segment.paceClass.color, lineWidth: 5)
-                    }
+        Map(position: mapPositionBinding, interactionModes: replayModel.standardMapInteractionModes) {
+            ForEach(replayModel.completedVisibleSegments) { segment in
+                MapPolyline(coordinates: segment.coordinates)
+                    .stroke(segment.paceClass.color, lineWidth: 5)
+            }
 
-                    if let activeSegment = replayModel.activeVisibleSegment {
-                        MapPolyline(coordinates: activeSegment.coordinates)
-                            .stroke(activeSegment.paceClass.color, lineWidth: 5)
-                    }
+            if let activeSegment = replayModel.activeVisibleSegment {
+                MapPolyline(coordinates: activeSegment.coordinates)
+                    .stroke(activeSegment.paceClass.color, lineWidth: 5)
+            }
 
-                    if let first = replayModel.coordinates.first {
-                        Marker("Start", coordinate: first)
-                    }
+            if let first = replayModel.coordinates.first {
+                Marker("Start", coordinate: first)
+            }
 
-                    if replayModel.coordinates.count > 1,
-                       let last = replayModel.coordinates.last {
-                        Marker("Finish", coordinate: last)
-                    }
+            if replayModel.coordinates.count > 1,
+               let last = replayModel.coordinates.last {
+                Marker("Finish", coordinate: last)
+            }
 
-                    if let displayedCurrentCoordinate = replayModel.displayedCurrentCoordinate {
-                        Annotation("Current", coordinate: displayedCurrentCoordinate) {
-                            ZStack {
-                                Circle()
-                                    .fill(RunTheme.accent)
-                                    .frame(width: 18, height: 18)
-                                Circle()
-                                    .stroke(RunTheme.mapMarkerStroke, lineWidth: 3)
-                                    .frame(width: 18, height: 18)
-                            }
-                            .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
-                        }
+            if let displayedCurrentCoordinate = replayModel.displayedCurrentCoordinate {
+                Annotation("Current", coordinate: displayedCurrentCoordinate) {
+                    ZStack {
+                        Circle()
+                            .fill(RunTheme.accent)
+                            .frame(width: 18, height: 18)
+                        Circle()
+                            .stroke(RunTheme.mapMarkerStroke, lineWidth: 3)
+                            .frame(width: 18, height: 18)
                     }
-                }
-                .mapStyle(selectedMapTheme.mapStyle)
-                .runMapTheme(selectedMapTheme)
-
-            case .google:
-                if GoogleMapsBootstrap.isConfigured {
-                    GoogleMapView(
-                        routes: [replayModel.visibleCoordinates],
-                        currentCoordinate: replayModel.displayedCurrentCoordinate,
-                        lineColor: UIColor(RunTheme.routeAccent),
-                        mapTheme: selectedMapTheme,
-                        showsStartMarker: !replayModel.coordinates.isEmpty,
-                        showsEndMarker: replayModel.coordinates.count > 1,
-                        startCoordinate: replayModel.coordinates.first,
-                        endCoordinate: replayModel.coordinates.count > 1 ? replayModel.coordinates.last : nil,
-                        cameraFitRoutes: [replayModel.coordinates]
-                    )
-                } else {
-                    Text("Google Maps API 키를 설정하면 리플레이 경로를 비교할 수 있습니다.")
-                        .font(.subheadline)
-                        .foregroundStyle(RunTheme.secondaryText)
-                        .multilineTextAlignment(.center)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .background(RunTheme.subtleBackground)
+                    .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
                 }
             }
         }
+        .mapStyle(selectedMapTheme.mapStyle)
+        .runMapTheme(selectedMapTheme)
         .frame(height: 340)
         .clipShape(RoundedRectangle(cornerRadius: RunTheme.cardRadius))
         .overlay {
@@ -317,17 +288,12 @@ struct WorkoutReplayView: View {
                     }
                 }
                 .pickerStyle(.segmented)
-                .disabled(!replayModel.canReplay || replayModel.isPlaying || replayModel.mapProvider == .google)
+                .disabled(!replayModel.canReplay || replayModel.isPlaying)
                 .onChange(of: replayModel.cameraMode) { _, newMode in
                     replayModel.handleCameraModeChange(newMode)
                 }
 
-                if replayModel.mapProvider == .google {
-                    Text("Google 지도 비교 모드에서는 Apple 지도 카메라 기능을 사용하지 않습니다.")
-                        .font(.caption)
-                        .foregroundStyle(RunTheme.secondaryText)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                } else if replayModel.isPlaying {
+                if replayModel.isPlaying {
                     Text("일시정지 후 카메라 모드를 변경할 수 있습니다.")
                         .font(.caption)
                         .foregroundStyle(RunTheme.secondaryText)
@@ -349,7 +315,7 @@ struct WorkoutReplayView: View {
 
                 Toggle("지도 따라가기", isOn: isCameraFollowingBinding)
                     .labelsHidden()
-                    .disabled(replayModel.coordinates.isEmpty || replayModel.cameraMode == .cinematic || replayModel.mapProvider == .google)
+                    .disabled(replayModel.coordinates.isEmpty || replayModel.cameraMode == .cinematic)
             }
         }
         .runCard()
@@ -383,13 +349,6 @@ struct WorkoutReplayView: View {
         Binding(
             get: { replayModel.mapPosition },
             set: { replayModel.mapPosition = $0 }
-        )
-    }
-
-    private var mapProviderBinding: Binding<MapProvider> {
-        Binding(
-            get: { replayModel.mapProvider },
-            set: { replayModel.mapProvider = $0 }
         )
     }
 

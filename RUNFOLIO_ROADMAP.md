@@ -74,11 +74,11 @@ Run Log는 러닝 기록을 단순히 숫자와 목록으로 저장하는 앱이
 
 ## 3.1 2026-07-12 저장소에서 확인된 구현 기준
 
-현재 저장소의 중심은 Web이 아니라 **iOS 17+ SwiftUI 앱**이다. Apple HealthKit의 최근 1년 러닝 기록과 workout route를 읽고, Apple Map 또는 선택적으로 Google Map에서 표시한다.
+현재 저장소의 중심은 Web이 아니라 **iOS 17+ SwiftUI 앱**이다. Apple HealthKit의 최근 1년 러닝 기록과 workout route를 읽고 Apple MapKit에서 표시한다.
 
 - HealthKit 권한 요청, 최근 1년 러닝 workout 및 평균 심박수 조회
 - 러닝 요약, 기간별 통계, 상세 이력, 최근 러닝 경로 미리보기
-- 개별 경로 지도, 시작/종료 마커, Apple/Google 지도 선택
+- 개별 경로 지도, 시작/종료 마커, Apple MapKit 단일 구현
 - 시간 기반 경로 재생, 재생/일시정지/리셋, 타임라인, 10x/20x/40x 배속
 - 현재 위치 마커, Apple 지도 카메라 추적 및 cinematic 모드
 - 빠름/보통/느림의 상대 페이스 색상

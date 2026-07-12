@@ -14,7 +14,6 @@ struct FullscreenReplayView: View {
 
     init(
         workout: RunWorkout,
-        initialMapProvider: MapProvider = .apple,
         initialPlaybackSpeed: PlaybackSpeed = .ten,
         initialCameraMode: ReplayCameraMode = .standard,
         initialIsCameraFollowing: Bool = true
@@ -22,7 +21,6 @@ struct FullscreenReplayView: View {
         _replayModel = StateObject(
             wrappedValue: ReplayViewModel(
                 workout: workout,
-                initialMapProvider: initialMapProvider,
                 initialPlaybackSpeed: initialPlaybackSpeed,
                 initialCameraMode: initialCameraMode,
                 initialIsCameraFollowing: initialIsCameraFollowing
@@ -93,21 +91,11 @@ struct FullscreenReplayView: View {
 
             Spacer()
 
-            HStack(spacing: 8) {
-                RunBadge(
-                    text: replayModel.mapProvider.title,
-                    systemImage: "map",
-                    tone: .neutral
-                )
-
-                if replayModel.mapProvider == .apple {
-                    RunBadge(
-                        text: replayModel.cameraMode.label,
-                        systemImage: "view.3d",
-                        tone: .accent
-                    )
-                }
-            }
+            RunBadge(
+                text: replayModel.cameraMode.label,
+                systemImage: "view.3d",
+                tone: .accent
+            )
         }
     }
 
@@ -253,69 +241,41 @@ struct FullscreenReplayView: View {
 
     @ViewBuilder
     private var fullscreenMap: some View {
-        switch replayModel.mapProvider {
-        case .apple:
-            Map(position: mapPositionBinding, interactionModes: []) {
-                ForEach(replayModel.completedVisibleSegments) { segment in
-                    MapPolyline(coordinates: segment.coordinates)
-                        .stroke(segment.paceClass.color, lineWidth: 5)
-                }
-
-                if let activeSegment = replayModel.activeVisibleSegment {
-                    MapPolyline(coordinates: activeSegment.coordinates)
-                        .stroke(activeSegment.paceClass.color, lineWidth: 5)
-                }
-
-                if let first = replayModel.coordinates.first {
-                    Marker("Start", coordinate: first)
-                }
-
-                if replayModel.coordinates.count > 1,
-                   let last = replayModel.coordinates.last {
-                    Marker("Finish", coordinate: last)
-                }
-
-                if let displayedCurrentCoordinate = replayModel.displayedCurrentCoordinate {
-                    Annotation("Current", coordinate: displayedCurrentCoordinate) {
-                        ZStack {
-                            Circle()
-                                .fill(RunTheme.accent)
-                                .frame(width: 18, height: 18)
-                            Circle()
-                                .stroke(RunTheme.mapMarkerStroke, lineWidth: 3)
-                                .frame(width: 18, height: 18)
-                        }
-                    }
-                }
+        Map(position: mapPositionBinding, interactionModes: []) {
+            ForEach(replayModel.completedVisibleSegments) { segment in
+                MapPolyline(coordinates: segment.coordinates)
+                    .stroke(segment.paceClass.color, lineWidth: 5)
             }
-            .mapStyle(selectedMapTheme.mapStyle)
-            .runMapTheme(selectedMapTheme)
 
-        case .google:
-            if GoogleMapsBootstrap.isConfigured {
-                GoogleMapView(
-                    routes: [replayModel.visibleCoordinates],
-                    currentCoordinate: replayModel.displayedCurrentCoordinate,
-                    lineColor: UIColor(RunTheme.routeAccent),
-                    mapTheme: selectedMapTheme,
-                    showsStartMarker: !replayModel.coordinates.isEmpty,
-                    showsEndMarker: replayModel.coordinates.count > 1,
-                    startCoordinate: replayModel.coordinates.first,
-                    endCoordinate: replayModel.coordinates.count > 1 ? replayModel.coordinates.last : nil,
-                    cameraFitRoutes: [replayModel.coordinates],
-                    isInteractionEnabled: false
-                )
-            } else {
-                Color.black
-                    .overlay {
-                        Text("Google Maps API 키를 설정하면 fullscreen 비교 지도를 확인할 수 있습니다.")
-                            .font(RunTheme.body)
-                            .foregroundStyle(RunTheme.overlayTextPrimary)
-                            .multilineTextAlignment(.center)
-                            .padding(24)
+            if let activeSegment = replayModel.activeVisibleSegment {
+                MapPolyline(coordinates: activeSegment.coordinates)
+                    .stroke(activeSegment.paceClass.color, lineWidth: 5)
+            }
+
+            if let first = replayModel.coordinates.first {
+                Marker("Start", coordinate: first)
+            }
+
+            if replayModel.coordinates.count > 1,
+               let last = replayModel.coordinates.last {
+                Marker("Finish", coordinate: last)
+            }
+
+            if let displayedCurrentCoordinate = replayModel.displayedCurrentCoordinate {
+                Annotation("Current", coordinate: displayedCurrentCoordinate) {
+                    ZStack {
+                        Circle()
+                            .fill(RunTheme.accent)
+                            .frame(width: 18, height: 18)
+                        Circle()
+                            .stroke(RunTheme.mapMarkerStroke, lineWidth: 3)
+                            .frame(width: 18, height: 18)
                     }
+                }
             }
         }
+        .mapStyle(selectedMapTheme.mapStyle)
+        .runMapTheme(selectedMapTheme)
     }
 
     private var mapPositionBinding: Binding<MapCameraPosition> {
@@ -346,7 +306,6 @@ final class ReplayViewModel: ObservableObject {
     @Published var replayElapsedTime: TimeInterval = 0
     @Published var visualProgress = 0.0
     @Published var playbackSpeed: PlaybackSpeed
-    @Published var mapProvider: MapProvider
     @Published var cameraMode: ReplayCameraMode
     @Published var isCameraFollowing: Bool
     @Published var lastCameraHeading: CLLocationDirection?
@@ -363,23 +322,19 @@ final class ReplayViewModel: ObservableObject {
     private let headingSmoothingFactor = 0.18
     private let programmaticCameraMoveGraceInterval: TimeInterval = 0.28
     private let initialPlaybackSpeed: PlaybackSpeed
-    private let initialMapProvider: MapProvider
     private let initialCameraMode: ReplayCameraMode
     private let initialIsCameraFollowing: Bool
 
     init(
         workout: RunWorkout,
-        initialMapProvider: MapProvider = .apple,
         initialPlaybackSpeed: PlaybackSpeed = .ten,
         initialCameraMode: ReplayCameraMode = .standard,
         initialIsCameraFollowing: Bool = true
     ) {
         self.workout = workout
-        self.initialMapProvider = initialMapProvider
         self.initialPlaybackSpeed = initialPlaybackSpeed
         self.initialCameraMode = initialCameraMode
         self.initialIsCameraFollowing = initialIsCameraFollowing
-        self.mapProvider = initialMapProvider
         self.playbackSpeed = initialPlaybackSpeed
         self.cameraMode = initialCameraMode
         self.isCameraFollowing = initialIsCameraFollowing
@@ -493,10 +448,6 @@ final class ReplayViewModel: ObservableObject {
     }
 
     var standardMapInteractionModes: MapInteractionModes {
-        if mapProvider == .google {
-            return .all
-        }
-
         if cameraMode == .cinematic || isPlaying {
             return []
         }
@@ -505,10 +456,6 @@ final class ReplayViewModel: ObservableObject {
     }
 
     var cameraFollowStatusText: String {
-        if mapProvider == .google {
-            return "Google 지도 비교 모드에서는 경로 표시만 비교합니다."
-        }
-
         if cameraMode == .cinematic {
             return "진행 방향을 따라 3D 카메라가 고정됩니다."
         }
@@ -587,10 +534,6 @@ final class ReplayViewModel: ObservableObject {
     }
 
     func handleCameraModeChange(_ mode: ReplayCameraMode) {
-        guard mapProvider == .apple else {
-            return
-        }
-
         guard !isPlaying else {
             debugReplayLog("ignored camera mode change while playing")
             return
@@ -682,10 +625,6 @@ final class ReplayViewModel: ObservableObject {
     }
 
     func handleMapPositionChange(_ newPosition: MapCameraPosition) {
-        guard mapProvider == .apple else {
-            return
-        }
-
         guard newPosition.positionedByUser else {
             return
         }
@@ -709,7 +648,6 @@ final class ReplayViewModel: ObservableObject {
         visualProgress = 0
         isPlaying = false
         playbackSpeed = initialPlaybackSpeed
-        mapProvider = initialMapProvider
         cameraMode = initialCameraMode
         isCameraFollowing = initialIsCameraFollowing
         lastCameraHeading = nil
@@ -768,10 +706,6 @@ final class ReplayViewModel: ObservableObject {
     }
 
     private func syncCameraToCurrentIndexIfNeeded(force: Bool = false) {
-        guard mapProvider == .apple else {
-            return
-        }
-
         guard isCameraFollowing else {
             return
         }

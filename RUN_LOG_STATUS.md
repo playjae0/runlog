@@ -6,7 +6,11 @@
 
 ## 요약
 
-Run Log는 현재 **iOS 17 이상을 대상으로 하는 SwiftUI·HealthKit 앱**이다. 로드맵이 전제한 Web MVP는 존재하지 않지만, iOS 코드에서는 핵심 MVP인 개별 경로 재생, 상대 페이스 색상, 월간 누적 지도가 이미 상당 부분 구현되어 있다.
+Run Log는 현재 **iOS 17 이상을 대상으로 하는 SwiftUI·HealthKit·Apple MapKit 앱**이다. 로드맵이 전제한 Web MVP는 존재하지 않지만, iOS 코드에서는 핵심 MVP인 개별 경로 재생, 상대 페이스 색상, 월간 누적 지도가 이미 상당 부분 구현되어 있다.
+
+### Sprint 진행
+
+- Phase A 완료: Google Maps SDK, API 키, 제공자 선택 UI를 제거하고 모든 지도 화면을 Apple MapKit으로 단일화했다.
 
 현재 가장 큰 과제는 새 화면 추가보다 **핵심 러닝 데이터의 정확성과 회귀 방지 기반을 확보하는 것**이다. 테스트 타깃이 없고, 여러 `HKWorkoutRoute` 조각 중 첫 번째만 사용하며, “현재 페이스”가 실제 순간/구간 페이스가 아닌 시작부터 현재까지 평균이다. 전체 통계라는 UI 문구와 달리 실제 조회 범위도 최근 1년이다.
 
@@ -64,7 +68,7 @@ Run Log는 현재 **iOS 17 이상을 대상으로 하는 SwiftUI·HealthKit 앱*
 
 ### 지도와 리플레이
 
-- Apple MapKit 및 Google Maps SDK 10.0.0 선택 구조
+- Apple MapKit 단일 지도 구조
 - 정적 전체 경로 polyline, 시작/종료 마커, 자동 영역 맞춤
 - timestamp 기반 재생/일시정지/리셋
 - 포인트 단위 타임라인 슬라이더와 10x/20x/40x 배속
@@ -101,7 +105,7 @@ Run Log는 현재 **iOS 17 이상을 대상으로 하는 SwiftUI·HealthKit 앱*
 
 - 로드맵의 1x/2x/4x 대신 10x/20x/40x만 제공한다.
 - 남은 거리, 진행률 숫자, 현재 구간 번호는 표시하지 않는다.
-- Apple Map만 페이스별 polyline과 카메라 추적을 지원한다. Google Map 리플레이는 단색 경로와 전체 영역 고정이며 현재 위치만 이동한다.
+- 페이스별 polyline과 카메라 추적은 Apple MapKit으로 제공한다.
 - 두 개의 항상 연결된 타이머가 재생 중이 아닐 때도 이벤트를 발생시켜 불필요한 에너지 사용 가능성이 있다.
 - `FullscreenReplayView.swift` 한 파일에 화면, 상태 모델, 카메라 수학, 데이터 가공이 1,200줄 이상 결합되어 있다.
 
@@ -116,9 +120,8 @@ Run Log는 현재 **iOS 17 이상을 대상으로 하는 SwiftUI·HealthKit 앱*
 
 ### 제품화
 
-- Google Maps API 키는 빌드 설정 주입 구조만 있으며 저장소에 개발/배포 환경 구성 안내가 없다.
 - 접근성 식별자, 오류 로깅, 분석, 개인정보/위치 숨김 정책이 없다.
-- README는 초기 프로토타입 수준 설명이라 현재 탭, 캐시, 월간 지도, 리플레이, Google Map 기능을 반영하지 않는다.
+- README는 초기 프로토타입 수준 설명이라 현재 탭, 캐시, 월간 지도, 리플레이 기능을 반영하지 않는다.
 - 화면 표시명은 RunLog지만 Xcode 프로젝트/타깃/번들 ID와 소스 폴더는 `RunHealthPrototype` 명칭을 유지한다.
 
 ## 4. 아직 시작되지 않은 기능
@@ -141,7 +144,7 @@ Run Log는 현재 **iOS 17 이상을 대상으로 하는 SwiftUI·HealthKit 앱*
 | 제품명 | Runfolio | 사용자 노출명은 RunLog, 현재 정식 명칭은 Run Log |
 | 주 플랫폼 | Web MVP 후 PWA/Android | Web/Android 코드 없이 iOS SwiftUI 앱이 중심 |
 | 데이터 입력 | GPX 업로드를 MVP 1순위로 제안 | Apple HealthKit이 유일한 실제 데이터 원본 |
-| 지도 | 라이브러리 미확정, 정적 지도만 확인 | Apple MapKit + 선택적 Google Maps SDK |
+| 지도 | 라이브러리 미확정, 정적 지도만 확인 | Apple MapKit 단일 구현 |
 | 리플레이 | 남은 주요 개발 범위 | 재생·슬라이더·배속·마커·카메라·전체 화면까지 구현 |
 | 페이스 시각화 | 미구현 목표 | 3단계 상대 페이스 색상 구현, 정확도 보정은 미완성 |
 | 월간 아카이브 | 미구현 목표 | 최근 12개월 요약·누적 지도·목록 구현, 선택 연동은 미완성 |
@@ -170,10 +173,8 @@ Run Log는 현재 **iOS 17 이상을 대상으로 하는 SwiftUI·HealthKit 앱*
 
 1. 리플레이 핵심 파일이 지나치게 커 UI와 도메인 로직 테스트가 어렵다.
 2. 재생/시각 타이머가 일시정지 중에도 연결돼 있다.
-3. Google Map은 Apple Map과 기능 동등성이 없지만 같은 제공자 선택으로 노출된다.
-4. `RunWorkoutCacheStore`는 `@unchecked Sendable`로 동시성 안전을 컴파일러 대신 개발자가 보장한다.
-5. `.DerivedData/`가 `.gitignore`의 `DerivedData/` 패턴에 잡히지 않아 대량의 생성물이 untracked 상태로 노출된다.
-6. 내부 프로젝트명·번들 ID가 프로토타입 이름이고 README와 실제 기능이 어긋난다.
+3. `RunWorkoutCacheStore`는 `@unchecked Sendable`로 동시성 안전을 컴파일러 대신 개발자가 보장한다.
+4. 내부 프로젝트명·번들 ID가 프로토타입 이름이고 README와 실제 기능이 어긋난다.
 
 ## 7. Web, 모바일, Android 현재 구조
 
@@ -187,7 +188,7 @@ Run Log는 현재 **iOS 17 이상을 대상으로 하는 SwiftUI·HealthKit 앱*
 - SwiftUI `NavigationStack` + `TabView`, 별도 전역 상태관리 라이브러리 없음
 - 각 화면의 `@State`, `@StateObject`, `@AppStorage`와 서비스 객체로 상태 관리
 - HealthKit이 workout/route/heart rate 데이터 원본
-- MapKit 기본, Google Maps SDK 10.0.0 선택 지원
+- Apple MapKit 단일 지도 구현
 - workout 요약은 Application Support의 JSON 캐시, route는 메모리 캐시
 - 서버/API/데이터베이스 없음
 
@@ -200,7 +201,7 @@ Run Log는 현재 **iOS 17 이상을 대상으로 하는 SwiftUI·HealthKit 앱*
 1. **P0: 빌드 환경 복구와 테스트 기반** — Xcode 플랫폼/CoreSimulator 정합성을 맞추고 XCTest 타깃을 추가해 핵심 계산과 route 병합을 검증한다.
 2. **P0: HealthKit route 정규화** — 모든 route 조각 병합, 시간 정렬, 중복·유효하지 않은 좌표·시간 역전 처리.
 3. **P1: 지표 의미 교정** — 현재 페이스를 이동 창/구간 페이스로 계산하거나 라벨을 “현재까지 평균”으로 변경하고, 전체 기록의 365일 범위를 UI와 일치시킨다.
-4. **P1: 리플레이 안정화** — 재생 중에만 타이머 활성화, 긴/정지 포함 경로 검증, Apple/Google 기능 차이 명시.
+4. **P1: 리플레이 안정화** — 재생 중에만 타이머 활성화하고 긴/정지 포함 경로를 검증한다.
 5. **P1: 월간 아카이브 상호작용** — route별 색상·선택·강조, 지도/목록 동기화, 더 긴 월 범위.
 6. **P2: 기록 탐색** — 정렬, 검색, 기간/거리 필터, 고도와 경로 미리보기.
 7. **P2: 로컬 데이터 완성** — route 영속 캐시, 증분 갱신, 실패/권한 UX, README와 구성 문서 갱신.
@@ -240,7 +241,8 @@ Run Log는 현재 **iOS 17 이상을 대상으로 하는 SwiftUI·HealthKit 앱*
 - `git diff --check`: 통과
 - `xcrun swiftc -frontend -parse RunHealthPrototype/*.swift`: 통과
 - XCTest/lint: 구성 자체가 없어 실행 불가
-- `xcodebuild ... build`: 패키지 `GoogleMaps 10.0.0` 해석은 성공했으나 Xcode 26.6과 설치된 iOS 26.5/CoreSimulator 구성 불일치로 대상 선택 단계에서 종료. 컴파일 성공 여부는 미확정
+- `xcodebuild -list`: Google 패키지 제거 후 프로젝트/스킴 해석 통과
+- `xcodebuild ... build`: Xcode 26.6과 설치된 iOS 26.5/CoreSimulator 구성 불일치로 대상 선택 단계에서 종료. 컴파일 성공 여부는 미확정
 
 ## 작업 트리 주의사항
 

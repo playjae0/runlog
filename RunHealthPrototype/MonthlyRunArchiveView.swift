@@ -9,7 +9,6 @@ struct MonthlyRunArchiveView: View {
     @State private var routes: [RunRoute] = []
     @State private var routeState: MonthlyRouteLoadState = .idle
     @State private var mapPosition: MapCameraPosition = .automatic
-    @State private var mapProvider: MapProvider = .apple
 
     private let healthKitService = HealthKitService()
     private let calendar = Calendar.current
@@ -134,9 +133,6 @@ struct MonthlyRunArchiveView: View {
         ) {
             HStack(alignment: .center, spacing: 12) {
                 routeStatusBadge
-                Spacer()
-                MapProviderPicker(selection: $mapProvider)
-                    .frame(maxWidth: 220)
             }
 
             routeMapContent
@@ -181,38 +177,14 @@ struct MonthlyRunArchiveView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .background(RunTheme.subtleBackground)
             } else {
-                Group {
-                    switch mapProvider {
-                    case .apple:
-                        Map(position: $mapPosition) {
-                            ForEach(routes) { route in
-                                MapPolyline(coordinates: route.coordinates)
-                                    .stroke(RunTheme.routeAccent, lineWidth: 4)
-                            }
-                        }
-                        .mapStyle(selectedMapTheme.mapStyle)
-                        .runMapTheme(selectedMapTheme)
-
-                    case .google:
-                        if GoogleMapsBootstrap.isConfigured {
-                            GoogleMapView(
-                                routes: routes.map(\.coordinates),
-                                currentCoordinate: nil,
-                                lineColor: UIColor(RunTheme.routeAccent),
-                                mapTheme: selectedMapTheme,
-                                showsStartMarker: false,
-                                showsEndMarker: false
-                            )
-                        } else {
-                            Text("Google Maps API 키를 설정하면 월별 누적 경로를 비교할 수 있습니다.")
-                                .font(.subheadline)
-                                .foregroundStyle(RunTheme.secondaryText)
-                                .multilineTextAlignment(.center)
-                                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                                .background(RunTheme.subtleBackground)
-                        }
+                Map(position: $mapPosition) {
+                    ForEach(routes) { route in
+                        MapPolyline(coordinates: route.coordinates)
+                            .stroke(RunTheme.routeAccent, lineWidth: 4)
                     }
                 }
+                .mapStyle(selectedMapTheme.mapStyle)
+                .runMapTheme(selectedMapTheme)
             }
         }
     }

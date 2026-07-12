@@ -8,7 +8,6 @@ struct WorkoutRouteMapView: View {
     @State private var route: RunRoute?
     @State private var routeState: RouteState = .loading
     @State private var mapPosition: MapCameraPosition = .automatic
-    @State private var mapProvider: MapProvider = .apple
 
     private let healthKitService = HealthKitService()
 
@@ -19,7 +18,6 @@ struct WorkoutRouteMapView: View {
     var body: some View {
         VStack(spacing: 14) {
             routeStatus
-            MapProviderPicker(selection: $mapProvider)
             routeMap
         }
         .padding(RunTheme.pagePadding)
@@ -65,46 +63,22 @@ struct WorkoutRouteMapView: View {
 
     @ViewBuilder
     private var routeMap: some View {
-        Group {
-            switch mapProvider {
-            case .apple:
-                Map(position: $mapPosition) {
-                    if let route {
-                        MapPolyline(coordinates: route.coordinates)
-                            .stroke(RunTheme.routeAccent, lineWidth: 4)
+        Map(position: $mapPosition) {
+            if let route {
+                MapPolyline(coordinates: route.coordinates)
+                    .stroke(RunTheme.routeAccent, lineWidth: 4)
 
-                        if let first = route.coordinates.first {
-                            Marker("Start", coordinate: first)
-                        }
-
-                        if let last = route.coordinates.last {
-                            Marker("Finish", coordinate: last)
-                        }
-                    }
+                if let first = route.coordinates.first {
+                    Marker("Start", coordinate: first)
                 }
-                .mapStyle(selectedMapTheme.mapStyle)
-                .runMapTheme(selectedMapTheme)
 
-            case .google:
-                if GoogleMapsBootstrap.isConfigured {
-                    GoogleMapView(
-                        routes: route.map { [$0.coordinates] } ?? [],
-                        currentCoordinate: nil,
-                        lineColor: UIColor(RunTheme.routeAccent),
-                        mapTheme: selectedMapTheme,
-                        showsStartMarker: true,
-                        showsEndMarker: true
-                    )
-                } else {
-                    Text("Google Maps API 키를 설정하면 비교 지도를 확인할 수 있습니다.")
-                        .font(.subheadline)
-                        .foregroundStyle(RunTheme.secondaryText)
-                        .multilineTextAlignment(.center)
-                        .frame(maxWidth: .infinity, minHeight: 320)
-                        .background(RunTheme.subtleBackground)
+                if let last = route.coordinates.last {
+                    Marker("Finish", coordinate: last)
                 }
             }
         }
+        .mapStyle(selectedMapTheme.mapStyle)
+        .runMapTheme(selectedMapTheme)
         .frame(maxWidth: .infinity, minHeight: 320)
         .clipShape(RoundedRectangle(cornerRadius: RunTheme.cardRadius))
         .overlay {
