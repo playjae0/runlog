@@ -21,7 +21,7 @@ struct MonthlyRunArchiveMonth: Identifiable, Hashable {
     }
 
     static func recentMonths(
-        count: Int = 12,
+        count: Int = 24,
         calendar: Calendar = .current,
         now: Date = Date()
     ) -> [MonthlyRunArchiveMonth] {

@@ -9,6 +9,7 @@ struct MonthlyRunArchiveView: View {
     @State private var routes: [RunRoute] = []
     @State private var routeState: MonthlyRouteLoadState = .idle
     @State private var mapPosition: MapCameraPosition = .automatic
+    @State private var selectedWorkoutID: UUID?
 
     private let healthKitService = HealthKitService()
     private let calendar = Calendar.current
@@ -46,6 +47,9 @@ struct MonthlyRunArchiveView: View {
         .task(id: routeTaskID) {
             await loadRoutes()
         }
+        .onChange(of: selectedMonth) { _, _ in
+            selectedWorkoutID = nil
+        }
     }
 
     private var monthOptions: [MonthlyRunArchiveMonth] {
@@ -71,15 +75,16 @@ struct MonthlyRunArchiveView: View {
         VStack(alignment: .leading, spacing: 12) {
             RunSectionTitle(
                 title: "월별 아카이브",
-                caption: "선택한 월의 모든 러닝 route를 한 번에 봅니다"
+                caption: "최근 24개월의 러닝 route를 한 번에 봅니다"
             )
 
             HStack(spacing: 12) {
-                Label("월 선택", systemImage: "calendar")
-                    .font(RunTheme.caption)
-                    .foregroundStyle(RunTheme.textSecondary)
-
-                Spacer()
+                Button {
+                    moveMonth(by: 1)
+                } label: {
+                    Image(systemName: "chevron.left")
+                }
+                .disabled(!canMoveToOlderMonth)
 
                 Picker("월", selection: $selectedMonth) {
                     ForEach(monthOptions) { month in
@@ -89,6 +94,13 @@ struct MonthlyRunArchiveView: View {
                 }
                 .pickerStyle(.menu)
                 .tint(RunTheme.accent)
+
+                Button {
+                    moveMonth(by: -1)
+                } label: {
+                    Image(systemName: "chevron.right")
+                }
+                .disabled(!canMoveToNewerMonth)
             }
             .runCard(padding: 16, shadowOpacity: 0.05)
         }
@@ -180,7 +192,10 @@ struct MonthlyRunArchiveView: View {
                 Map(position: $mapPosition) {
                     ForEach(routes) { route in
                         MapPolyline(coordinates: route.coordinates)
-                            .stroke(RunTheme.routeAccent, lineWidth: 4)
+                            .stroke(
+                                routeColor(for: route),
+                                lineWidth: selectedWorkoutID == route.workoutID ? 7 : 4
+                            )
                     }
                 }
                 .mapStyle(selectedMapTheme.mapStyle)
@@ -245,12 +260,29 @@ struct MonthlyRunArchiveView: View {
             } else {
                 VStack(spacing: 10) {
                     ForEach(monthlyWorkouts) { workout in
-                        NavigationLink {
-                            WorkoutDetailView(workout: workout)
+                        Button {
+                            selectWorkout(workout)
                         } label: {
                             monthlyWorkoutRow(workout)
                         }
                         .buttonStyle(.plain)
+                        .overlay {
+                            if selectedWorkoutID == workout.id {
+                                RoundedRectangle(cornerRadius: RunTheme.cardRadius, style: .continuous)
+                                    .stroke(RunTheme.accent, lineWidth: 2)
+                            }
+                        }
+                    }
+
+                    if let selectedWorkout {
+                        NavigationLink {
+                            WorkoutDetailView(workout: selectedWorkout)
+                        } label: {
+                            Label("선택한 러닝 상세 보기", systemImage: "arrow.right.circle.fill")
+                                .font(RunTheme.body)
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.borderedProminent)
                     }
                 }
             }
@@ -263,6 +295,77 @@ struct MonthlyRunArchiveView: View {
             subtitle: "\(WorkoutFormatter.distance(workout.distanceMeters))  •  \(WorkoutFormatter.duration(workout.duration))",
             systemImage: "figure.run"
         )
+    }
+
+    private var selectedWorkout: RunWorkout? {
+        guard let selectedWorkoutID else {
+            return nil
+        }
+
+        return monthlyWorkouts.first { $0.id == selectedWorkoutID }
+    }
+
+    private var selectedMonthIndex: Int? {
+        monthOptions.firstIndex(of: selectedMonth)
+    }
+
+    private var canMoveToOlderMonth: Bool {
+        guard let selectedMonthIndex else {
+            return false
+        }
+
+        return selectedMonthIndex < monthOptions.count - 1
+    }
+
+    private var canMoveToNewerMonth: Bool {
+        guard let selectedMonthIndex else {
+            return false
+        }
+
+        return selectedMonthIndex > 0
+    }
+
+    private func moveMonth(by indexOffset: Int) {
+        guard let selectedMonthIndex else {
+            return
+        }
+
+        let nextIndex = selectedMonthIndex + indexOffset
+        guard monthOptions.indices.contains(nextIndex) else {
+            return
+        }
+
+        selectedMonth = monthOptions[nextIndex]
+    }
+
+    private func selectWorkout(_ workout: RunWorkout) {
+        selectedWorkoutID = workout.id
+
+        guard let route = routes.first(where: { $0.workoutID == workout.id }),
+              !route.coordinates.isEmpty else {
+            return
+        }
+
+        withAnimation(RunTheme.smoothAnimation) {
+            mapPosition = .region(RunRouteMapRegion.region(for: route.coordinates))
+        }
+    }
+
+    private func routeColor(for route: RunRoute) -> Color {
+        if let selectedWorkoutID,
+           routes.contains(where: { $0.workoutID == selectedWorkoutID }),
+           selectedWorkoutID != route.workoutID {
+            return RunTheme.routeAccent.opacity(0.25)
+        }
+
+        let palette: [Color] = [
+            RunTheme.routeAccent,
+            RunTheme.accent,
+            RunTheme.paceNormal,
+            RunTheme.paceSlow
+        ]
+        let index = monthlyWorkouts.firstIndex { $0.id == route.workoutID } ?? 0
+        return palette[index % palette.count]
     }
 
     private func loadRoutes() async {

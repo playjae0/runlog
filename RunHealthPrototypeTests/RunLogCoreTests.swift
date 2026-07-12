@@ -69,6 +69,23 @@ final class RunLogCoreTests: XCTestCase {
         XCTAssertFalse(month.contains(date(2026, 8, 1, calendar: calendar)))
     }
 
+    func testRecentMonthsStartAtCurrentMonthAndNeverIncludeFuture() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let now = date(2026, 7, 12, calendar: calendar)
+
+        let months = MonthlyRunArchiveMonth.recentMonths(
+            count: 24,
+            calendar: calendar,
+            now: now
+        )
+
+        XCTAssertEqual(months.count, 24)
+        XCTAssertTrue(months[0].contains(now))
+        XCTAssertLessThanOrEqual(months[0].startDate, now)
+        XCTAssertTrue(months.dropFirst().allSatisfy { $0.endDate <= months[0].startDate })
+    }
+
     func testRouteNormalizationMergesAndSortsGroups() {
         let start = Date(timeIntervalSince1970: 1_000)
         let later = point(latitude: 37.2, longitude: 127.2, timestamp: start.addingTimeInterval(20))
