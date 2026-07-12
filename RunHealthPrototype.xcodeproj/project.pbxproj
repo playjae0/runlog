@@ -28,6 +28,7 @@
 		AA0000000000000000000028 /* RunRouteMapRegion.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000029 /* RunRouteMapRegion.swift */; };
 		AA000000000000000000002A /* WorkoutReplayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000002B /* WorkoutReplayView.swift */; };
 		AA0000000000000000000037 /* FullscreenReplayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000038 /* FullscreenReplayView.swift */; };
+		BB0000000000000000000001 /* RunLogCoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000011 /* RunLogCoreTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -55,6 +56,8 @@
 		AA0000000000000000000029 /* RunRouteMapRegion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunRouteMapRegion.swift; sourceTree = "<group>"; };
 		AA000000000000000000002B /* WorkoutReplayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutReplayView.swift; sourceTree = "<group>"; };
 		AA0000000000000000000038 /* FullscreenReplayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FullscreenReplayView.swift; sourceTree = "<group>"; };
+		BB0000000000000000000010 /* RunHealthPrototypeTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RunHealthPrototypeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		BB0000000000000000000011 /* RunLogCoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunLogCoreTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -66,6 +69,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		BB0000000000000000000051 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -73,9 +83,18 @@
 			isa = PBXGroup;
 			children = (
 				AA0000000000000000000031 /* RunHealthPrototype */,
+				BB0000000000000000000031 /* RunHealthPrototypeTests */,
 				AA0000000000000000000033 /* Frameworks */,
 				AA0000000000000000000032 /* Products */,
 			);
+			sourceTree = "<group>";
+		};
+		BB0000000000000000000031 /* RunHealthPrototypeTests */ = {
+			isa = PBXGroup;
+			children = (
+				BB0000000000000000000011 /* RunLogCoreTests.swift */,
+			);
+			path = RunHealthPrototypeTests;
 			sourceTree = "<group>";
 		};
 		AA0000000000000000000031 /* RunHealthPrototype */ = {
@@ -111,6 +130,7 @@
 			isa = PBXGroup;
 			children = (
 				AA0000000000000000000010 /* RunHealthPrototype.app */,
+				BB0000000000000000000010 /* RunHealthPrototypeTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -143,6 +163,24 @@
 			productReference = AA0000000000000000000010 /* RunHealthPrototype.app */;
 			productType = "com.apple.product-type.application";
 		};
+		BB0000000000000000000040 /* RunHealthPrototypeTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = BB0000000000000000000081 /* Build configuration list for PBXNativeTarget "RunHealthPrototypeTests" */;
+			buildPhases = (
+				BB0000000000000000000050 /* Sources */,
+				BB0000000000000000000051 /* Frameworks */,
+				BB0000000000000000000060 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				BB0000000000000000000072 /* PBXTargetDependency */,
+			);
+			name = RunHealthPrototypeTests;
+			productName = RunHealthPrototypeTests;
+			productReference = BB0000000000000000000010 /* RunHealthPrototypeTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -161,6 +199,10 @@
 							};
 						};
 					};
+					BB0000000000000000000040 = {
+						CreatedOnToolsVersion = 15.0;
+						TestTargetID = AA0000000000000000000040;
+					};
 				};
 			};
 			buildConfigurationList = AA0000000000000000000080 /* Build configuration list for PBXProject "RunHealthPrototype" */;
@@ -177,6 +219,7 @@
 			projectRoot = "";
 			targets = (
 				AA0000000000000000000040 /* RunHealthPrototype */,
+				BB0000000000000000000040 /* RunHealthPrototypeTests */,
 			);
 		};
 /* End PBXProject section */
@@ -187,6 +230,13 @@
 			buildActionMask = 2147483647;
 			files = (
 				AA0000000000000000000003 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		BB0000000000000000000060 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -219,7 +269,33 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		BB0000000000000000000050 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				BB0000000000000000000001 /* RunLogCoreTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXContainerItemProxy section */
+		BB0000000000000000000071 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = AA0000000000000000000070 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = AA0000000000000000000040;
+			remoteInfo = RunHealthPrototype;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXTargetDependency section */
+		BB0000000000000000000072 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = AA0000000000000000000040 /* RunHealthPrototype */;
+			targetProxy = BB0000000000000000000071 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		AA0000000000000000000090 /* Debug */ = {
@@ -395,6 +471,38 @@
 			};
 			name = Release;
 		};
+		BB0000000000000000000092 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.local.RunHealthPrototypeTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/RunHealthPrototype.app/RunHealthPrototype";
+			};
+			name = Debug;
+		};
+		BB0000000000000000000093 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.local.RunHealthPrototypeTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/RunHealthPrototype.app/RunHealthPrototype";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -412,6 +520,15 @@
 			buildConfigurations = (
 				AA0000000000000000000092 /* Debug */,
 				AA0000000000000000000093 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		BB0000000000000000000081 /* Build configuration list for PBXNativeTarget "RunHealthPrototypeTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				BB0000000000000000000092 /* Debug */,
+				BB0000000000000000000093 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

@@ -11,6 +11,7 @@ Run Log는 현재 **iOS 17 이상을 대상으로 하는 SwiftUI·HealthKit·App
 ### Sprint 진행
 
 - Phase A 완료: Google Maps SDK, API 키, 제공자 선택 UI를 제거하고 모든 지도 화면을 Apple MapKit으로 단일화했다.
+- Phase B 완료: `.DerivedData/` 등 생성물을 제외하고 XCTest 타깃과 거리·시간·다운샘플링·월 경계 회귀 테스트를 추가했다.
 
 현재 가장 큰 과제는 새 화면 추가보다 **핵심 러닝 데이터의 정확성과 회귀 방지 기반을 확보하는 것**이다. 테스트 타깃이 없고, 여러 `HKWorkoutRoute` 조각 중 첫 번째만 사용하며, “현재 페이스”가 실제 순간/구간 페이스가 아닌 시작부터 현재까지 평균이다. 전체 통계라는 UI 문구와 달리 실제 조회 범위도 최근 1년이다.
 
@@ -135,7 +136,7 @@ Run Log는 현재 **iOS 17 이상을 대상으로 하는 SwiftUI·HealthKit·App
 - 자체 GPS 측정, 백그라운드 추적, 음성 안내, 오프라인 동기화
 - Web 앱, 모바일 Web, PWA
 - Android 앱, Capacitor/React Native/Kotlin, Health Connect, Wear OS
-- XCTest, UI 테스트, lint, CI/CD, 운영 모니터링
+- UI 테스트, lint, CI/CD, 운영 모니터링
 
 ## 5. 로드맵 문서와 실제 코드의 차이
 
@@ -158,7 +159,7 @@ Run Log는 현재 **iOS 17 이상을 대상으로 하는 SwiftUI·HealthKit·App
 ### P0 — 신뢰성과 검증
 
 1. **분할 route 누락 가능성**: `HealthKitService.fetchUncachedRoute`가 첫 번째 `HKWorkoutRoute`만 처리한다.
-2. **자동화 테스트 전무**: 순수 계산 함수가 다수 있지만 XCTest 타깃이 없어 거리, 시간, 다운샘플링, 페이스 분류, 월/기간 경계를 보호하지 못한다.
+2. **테스트 실행 환경 차단**: XCTest 타깃과 핵심 순수 계산 테스트는 추가했지만 현재 CoreSimulator 버전 불일치로 실행하지 못했다.
 3. **실제 빌드 검증 환경 불일치**: Xcode 26.6과 설치된 CoreSimulator/플랫폼 구성의 빌드 버전이 맞지 않아 simulator와 generic iOS destination을 사용할 수 없다. Swift parser 검사는 통과했지만 타입체크·링크·실기기 실행 성공으로 간주할 수 없다.
 
 ### P1 — 데이터 의미와 사용자 신뢰
@@ -198,7 +199,7 @@ Run Log는 현재 **iOS 17 이상을 대상으로 하는 SwiftUI·HealthKit·App
 
 ## 8. 남은 작업 권장 우선순위
 
-1. **P0: 빌드 환경 복구와 테스트 기반** — Xcode 플랫폼/CoreSimulator 정합성을 맞추고 XCTest 타깃을 추가해 핵심 계산과 route 병합을 검증한다.
+1. **P0: 빌드 환경 복구** — Xcode 플랫폼/CoreSimulator 정합성을 맞추고 추가된 XCTest를 실제 실행한다.
 2. **P0: HealthKit route 정규화** — 모든 route 조각 병합, 시간 정렬, 중복·유효하지 않은 좌표·시간 역전 처리.
 3. **P1: 지표 의미 교정** — 현재 페이스를 이동 창/구간 페이스로 계산하거나 라벨을 “현재까지 평균”으로 변경하고, 전체 기록의 365일 범위를 UI와 일치시킨다.
 4. **P1: 리플레이 안정화** — 재생 중에만 타이머 활성화하고 긴/정지 포함 경로를 검증한다.
@@ -240,7 +241,7 @@ Run Log는 현재 **iOS 17 이상을 대상으로 하는 SwiftUI·HealthKit·App
 - `plutil -lint` (`Info.plist`, entitlements): 통과
 - `git diff --check`: 통과
 - `xcrun swiftc -frontend -parse RunHealthPrototype/*.swift`: 통과
-- XCTest/lint: 구성 자체가 없어 실행 불가
+- XCTest: 타깃과 5개 핵심 테스트를 추가했으나 CoreSimulator 버전 불일치로 실행 불가
 - `xcodebuild -list`: Google 패키지 제거 후 프로젝트/스킴 해석 통과
 - `xcodebuild ... build`: Xcode 26.6과 설치된 iOS 26.5/CoreSimulator 구성 불일치로 대상 선택 단계에서 종료. 컴파일 성공 여부는 미확정
 
