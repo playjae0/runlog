@@ -162,26 +162,38 @@ final class HealthKitService: @unchecked Sendable {
             let workout = try await fetchWorkout(id: workoutID)
             let routes = try await fetchRoutes(for: workout)
 
-            guard let route = routes.first else {
+            guard !routes.isEmpty else {
                 return .failure(HealthKitServiceError.routeUnavailable)
             }
 
-            let locations = try await fetchLocations(for: route)
-            let points = locations.map { location in
-                RunRoutePoint(
-                    latitude: location.coordinate.latitude,
-                    longitude: location.coordinate.longitude,
-                    timestamp: location.timestamp,
-                    altitude: location.verticalAccuracy >= 0 ? location.altitude : nil
+            var pointGroups: [[RunRoutePoint]] = []
+
+            for route in routes {
+                try Task.checkCancellation()
+                let locations = try await fetchLocations(for: route)
+                try Task.checkCancellation()
+
+                pointGroups.append(
+                    locations.map { location in
+                        RunRoutePoint(
+                            latitude: location.coordinate.latitude,
+                            longitude: location.coordinate.longitude,
+                            timestamp: location.timestamp,
+                            altitude: location.verticalAccuracy >= 0 ? location.altitude : nil
+                        )
+                    }
                 )
             }
-            let coordinates = locations.map(\.coordinate)
+
+            let points = normalizeRunRoutePoints(pointGroups)
+            guard !points.isEmpty else {
+                return .failure(HealthKitServiceError.routeUnavailable)
+            }
 
             return .success(
                 RunRoute(
                     workoutID: workoutID,
-                    points: points,
-                    coordinates: coordinates
+                    points: points
                 )
             )
         } catch {

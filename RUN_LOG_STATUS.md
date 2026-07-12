@@ -12,6 +12,7 @@ Run Log는 현재 **iOS 17 이상을 대상으로 하는 SwiftUI·HealthKit·App
 
 - Phase A 완료: Google Maps SDK, API 키, 제공자 선택 UI를 제거하고 모든 지도 화면을 Apple MapKit으로 단일화했다.
 - Phase B 완료: `.DerivedData/` 등 생성물을 제외하고 XCTest 타깃과 거리·시간·다운샘플링·월 경계 회귀 테스트를 추가했다.
+- Phase C 완료: 한 workout의 모든 `HKWorkoutRoute`를 병합하고 timestamp 안정 정렬, 유효 좌표 필터, 완전 동일 중복 제거를 적용했다.
 
 현재 가장 큰 과제는 새 화면 추가보다 **핵심 러닝 데이터의 정확성과 회귀 방지 기반을 확보하는 것**이다. 테스트 타깃이 없고, 여러 `HKWorkoutRoute` 조각 중 첫 번째만 사용하며, “현재 페이스”가 실제 순간/구간 페이스가 아닌 시작부터 현재까지 평균이다. 전체 통계라는 UI 문구와 달리 실제 조회 범위도 최근 1년이다.
 
@@ -95,8 +96,7 @@ Run Log는 현재 **iOS 17 이상을 대상으로 하는 SwiftUI·HealthKit·App
 
 ### 데이터 정확성
 
-- 한 workout에 `HKWorkoutRoute`가 여러 개면 `routes.first`만 읽는다. 일시정지/재개 등으로 route가 나뉜 기록은 경로 일부가 누락될 수 있다.
-- route 포인트의 시간 정렬, 중복 제거, 좌표 유효성 검사, GPS 점프/정지 구간 보정이 없다.
+- route 포인트 병합·정렬·명백한 중복과 유효하지 않은 좌표 제거는 구현됐다. GPS 점프/정지 구간 보정은 원본 훼손 위험 때문에 아직 적용하지 않았다.
 - 포인트 수 기준 단순 다운샘플링은 시간·거리 분포를 보존하지 않아 경로와 페이스 색상을 왜곡할 수 있다.
 - “현재 페이스”는 현재 구간/이동 창 페이스가 아니라 시작부터 현재까지의 평균 페이스다.
 - 비현실적인 페이스는 임계값 계산에서만 제외되고 지도에서는 `normal`로 표시된다.
@@ -158,9 +158,8 @@ Run Log는 현재 **iOS 17 이상을 대상으로 하는 SwiftUI·HealthKit·App
 
 ### P0 — 신뢰성과 검증
 
-1. **분할 route 누락 가능성**: `HealthKitService.fetchUncachedRoute`가 첫 번째 `HKWorkoutRoute`만 처리한다.
-2. **테스트 실행 환경 차단**: XCTest 타깃과 핵심 순수 계산 테스트는 추가했지만 현재 CoreSimulator 버전 불일치로 실행하지 못했다.
-3. **실제 빌드 검증 환경 불일치**: Xcode 26.6과 설치된 CoreSimulator/플랫폼 구성의 빌드 버전이 맞지 않아 simulator와 generic iOS destination을 사용할 수 없다. Swift parser 검사는 통과했지만 타입체크·링크·실기기 실행 성공으로 간주할 수 없다.
+1. **테스트 실행 환경 차단**: XCTest 타깃과 핵심 순수 계산·route 정규화 테스트는 추가했지만 현재 CoreSimulator 버전 불일치로 실행하지 못했다.
+2. **실제 빌드 검증 환경 불일치**: Xcode 26.6과 설치된 CoreSimulator/플랫폼 구성의 빌드 버전이 맞지 않아 simulator와 generic iOS destination을 사용할 수 없다. Swift parser 검사는 통과했지만 타입체크·링크·실기기 실행 성공으로 간주할 수 없다.
 
 ### P1 — 데이터 의미와 사용자 신뢰
 
@@ -200,8 +199,7 @@ Run Log는 현재 **iOS 17 이상을 대상으로 하는 SwiftUI·HealthKit·App
 ## 8. 남은 작업 권장 우선순위
 
 1. **P0: 빌드 환경 복구** — Xcode 플랫폼/CoreSimulator 정합성을 맞추고 추가된 XCTest를 실제 실행한다.
-2. **P0: HealthKit route 정규화** — 모든 route 조각 병합, 시간 정렬, 중복·유효하지 않은 좌표·시간 역전 처리.
-3. **P1: 지표 의미 교정** — 현재 페이스를 이동 창/구간 페이스로 계산하거나 라벨을 “현재까지 평균”으로 변경하고, 전체 기록의 365일 범위를 UI와 일치시킨다.
+2. **P1: 지표 의미 교정** — 현재 페이스를 이동 창/구간 페이스로 계산하거나 라벨을 “현재까지 평균”으로 변경하고, 전체 기록의 365일 범위를 UI와 일치시킨다.
 4. **P1: 리플레이 안정화** — 재생 중에만 타이머 활성화하고 긴/정지 포함 경로를 검증한다.
 5. **P1: 월간 아카이브 상호작용** — route별 색상·선택·강조, 지도/목록 동기화, 더 긴 월 범위.
 6. **P2: 기록 탐색** — 정렬, 검색, 기간/거리 필터, 고도와 경로 미리보기.
@@ -214,7 +212,7 @@ Run Log는 현재 **iOS 17 이상을 대상으로 하는 SwiftUI·HealthKit·App
 
 ### 선정 작업
 
-**HealthKit의 분할 route를 빠짐없이 병합하고, route 정규화 로직에 대한 단위 테스트를 추가한다.**
+**완료: HealthKit의 분할 route를 빠짐없이 병합하고 route 정규화 단위 테스트를 추가했다. 다음 작업은 지표 의미와 리플레이 생명주기 교정이다.**
 
 이 작업은 지도, 리플레이, 월간 누적 지도 모두가 공유하는 입력 데이터의 누락 가능성을 제거한다. 화면 디자인과 기존 탐색 구조는 바꾸지 않는다.
 
@@ -241,7 +239,7 @@ Run Log는 현재 **iOS 17 이상을 대상으로 하는 SwiftUI·HealthKit·App
 - `plutil -lint` (`Info.plist`, entitlements): 통과
 - `git diff --check`: 통과
 - `xcrun swiftc -frontend -parse RunHealthPrototype/*.swift`: 통과
-- XCTest: 타깃과 5개 핵심 테스트를 추가했으나 CoreSimulator 버전 불일치로 실행 불가
+- XCTest: 타깃과 10개 핵심/route 정규화 테스트를 추가했으나 CoreSimulator 버전 불일치로 실행 불가
 - `xcodebuild -list`: Google 패키지 제거 후 프로젝트/스킴 해석 통과
 - `xcodebuild ... build`: Xcode 26.6과 설치된 iOS 26.5/CoreSimulator 구성 불일치로 대상 선택 단계에서 종료. 컴파일 성공 여부는 미확정
 
