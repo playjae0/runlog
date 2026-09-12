@@ -154,6 +154,7 @@ struct ContentView: View {
                     viewState = .error("이 기기에서는 Health 데이터를 사용할 수 없습니다.")
                 case .requestCompleted:
                     viewState = .permissionRequested
+                    refreshRunningWorkouts(isAutomatic: false)
                 case .failed(let message):
                     viewState = .error("Health 권한 요청 실패: \(message)")
                 }
@@ -346,7 +347,7 @@ private enum RunListState: Equatable {
         case .loaded(let count):
             return "최근 1년 running workout \(count)개를 읽었습니다."
         case .empty:
-            return "조회는 성공했지만 running workout 데이터가 없습니다."
+            return "최근 1년 running workout이 없거나 Health 읽기 권한이 허용되지 않았습니다. Health 앱과 권한 설정을 확인해 주세요."
         case .error(let message):
             return message
         }

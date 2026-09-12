@@ -111,7 +111,7 @@ final class HealthKitService: @unchecked Sendable {
         case .failure(let error):
             if let serviceError = error as? HealthKitServiceError,
                serviceError == .routeUnavailable {
-                await Self.routeCache.store(.missing, for: workoutID)
+                await Self.routeCache.store(.missing(cachedAt: Date()), for: workoutID)
             }
         }
 
@@ -438,13 +438,24 @@ final class HealthKitService: @unchecked Sendable {
 private actor RunRouteCacheStore {
     enum Entry: Sendable {
         case route(RunRoute)
-        case missing
+        case missing(cachedAt: Date)
     }
 
+    private let missingEntryLifetime: TimeInterval = 10 * 60
     private var storage: [UUID: Entry] = [:]
 
     func value(for workoutID: UUID) -> Entry? {
-        storage[workoutID]
+        guard let entry = storage[workoutID] else {
+            return nil
+        }
+
+        if case .missing(let cachedAt) = entry,
+           Date().timeIntervalSince(cachedAt) >= missingEntryLifetime {
+            storage[workoutID] = nil
+            return nil
+        }
+
+        return entry
     }
 
     func store(_ entry: Entry, for workoutID: UUID) {

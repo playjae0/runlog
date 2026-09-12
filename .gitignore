@@ -2,6 +2,9 @@
 DerivedData/
 .DerivedData/
 build/
+.build/
+.swiftpm/
+*.log
 *.xcuserstate
 *.xcuserdata/
 xcuserdata/
